@@ -10,14 +10,53 @@ import Foundation
 
 struct CoinManager {
     
-    let baseURL = "https://rest.coinapi.io/v1/exchangerate/BTC"
-    let apiKey = "YOUR_API_KEY_HERE"
+    var delegate: CoinManagerDelegate?
     
-    func getCoinPrice(for currency: String) {
-        
-    }
+    let baseURL = "https://rest.coinapi.io/v1/exchangerate/BTC"
+    let apiKey = "8AB707F1-EA34-4EA9-B84A-99C6353C974A"
+    
     
     let currencyArray = ["AUD", "BRL","CAD","CNY","EUR","GBP","HKD","IDR","ILS","INR","JPY","MXN","NOK","NZD","PLN","RON","RUB","SEK","SGD","USD","ZAR"]
-
     
+    //MARK: - Networking
+    
+    func getCoinPrice(for currency: String) {
+        let urlString = "\(baseURL)/\(currency)?apikey=\(apiKey)"
+        
+        if let url = URL(string: urlString) {
+            let session = URLSession(configuration: .default)
+            let task = session.dataTask(with: url) { (data, response, error) in
+                if error != nil {
+                    self.delegate?.didFailWithError(error: error!)
+                    return
+                }
+                if let safeData = data {
+                    let bitCoinPrice = self.parseJSON(safeData)
+                    delegate?.didUpdatePrice(self, bitCoinData: bitCoinPrice!)
+                    
+                }
+            }
+            task.resume()
+        }
+    }
+    func parseJSON(_ data: Data) -> Double? {
+        
+        //Create a JSONDecoder
+        let decoder = JSONDecoder()
+        do {
+            
+            //try to decode the data using the CoinData structure
+            let decodedData = try decoder.decode(CoinData.self, from: data)
+            
+            //Get the last property from the decoded data.
+            let lastPrice = decodedData.rate
+            return lastPrice
+            
+        } catch {
+            
+            //Catch and print any errors.
+            print(error)
+            return nil
+        }
+    }
 }
